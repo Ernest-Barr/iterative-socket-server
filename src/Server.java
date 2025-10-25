@@ -21,18 +21,45 @@ public class Server {
                      PrintWriter out = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8), true)) {
 
                     String line = in.readLine();
-                    String command = normalize(line);
-                    String reply;
-                    switch (command) {
-                        case "DATE_AND_TIME": reply = dateTime(); break;
-                        case "UPTIME": reply = uptime(serverStart); break;
-                        case "MEMORY_USE": reply = memoryUse(); break;
-                        case "NETSTAT": reply = netstat(); break;
-                        case "CURRENT_USERS": reply = currentUsers(); break;
-                        case "RUNNING_PROCESSES": reply = runningProcesses(); break;
-                        default: reply = "ERROR: Use one of: DATE_AND_TIME, UPTIME, MEMORY_USE, NETSTAT, CURRENT_USERS, RUNNING_PROCESSES";
-                    }
+//                    String command = normalize(line);
+                    int command = Integer.parseInt(line);
+                    String reply = switch (command) {
+                        case 1 -> dateTime();
+                        case 2 -> uptime(serverStart);
+                        case 3 -> memoryUse();
+                        case 4 -> netstat();
+                        case 5 -> currentUsers();
+                        case 6 -> runningProcesses();
+                        case 7 -> "Closing Server";
+                        default ->
+                                "ERROR: Use one of: DATE_AND_TIME, UPTIME, MEMORY_USE, NETSTAT, CURRENT_USERS, RUNNING_PROCESSES";
+                    };
+//                    switch (command) {
+//                        case "DATE_AND_TIME":
+//                            reply = dateTime();
+//                            break;
+//                        case "UPTIME":
+//                            reply = uptime(serverStart);
+//                            break;
+//                        case "MEMORY_USE":
+//                            reply = memoryUse();
+//                            break;
+//                        case "NETSTAT":
+//                            reply = netstat();
+//                            break;
+//                        case "CURRENT_USERS":
+//                            reply = currentUsers();
+//                            break;
+//                        case "RUNNING_PROCESSES":
+//                            reply = runningProcesses();
+//                            break;
+//                        default:
+//                            reply = "ERROR: Use one of: DATE_AND_TIME, UPTIME, MEMORY_USE, NETSTAT, CURRENT_USERS, RUNNING_PROCESSES";
+//                    }
+
                     out.println(reply);
+                    if (command == 7) System.exit(0);
+
                 } catch (IOException e) {
                     System.err.println("Client error: " + e.getMessage());
                 }
@@ -65,8 +92,8 @@ public class Server {
     }
 
     private static String netstat() {
-        String out = runFirstLine(new String[]{"netstat","-an"});
-        if (isBlank(out)) out = runFirstLine(new String[]{"ss","-tuan"});
+        String out = runFirstLine(new String[]{"netstat", "-an"});
+        if (isBlank(out)) out = runFirstLine(new String[]{"ss", "-tuan"});
         return !isBlank(out) ? "Netstat: " + out : "Netstat: unavailable";
     }
 
@@ -76,7 +103,7 @@ public class Server {
     }
 
     private static String runningProcesses() {
-        String cnt = runFirstLine(new String[]{"sh","-c","ps -e | wc -l"});
+        String cnt = runFirstLine(new String[]{"sh", "-c", "ps -e | wc -l"});
         return "Running Processes: " + (isBlank(cnt) ? "unknown" : cnt.trim());
     }
 
@@ -101,9 +128,12 @@ public class Server {
                 }
             }
             p.waitFor();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return "";
     }
 
-    private static boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 }

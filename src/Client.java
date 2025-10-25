@@ -1,13 +1,13 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.time.Instant;
 
 
 public class Client {
@@ -28,17 +28,17 @@ public class Client {
 
         @Override
         public Pair<String, Long> call() throws IOException {
-            try (Socket socket = new Socket(this.IP, this.PORT); DataInputStream input = new DataInputStream(socket.getInputStream()); DataOutputStream output = new DataOutputStream(socket.getOutputStream())) {
+            try (Socket socket = new Socket(this.IP, this.PORT); BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)); PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)) {
                 long start = System.nanoTime();
-                output.writeUTF(this.message);
-                String outputMessage = input.readUTF();
+                output.println(this.message);
+                String outputMessage = input.readLine();
                 long time = System.nanoTime() - start;
                 return new Pair<>(outputMessage, time);
             }
         }
     }
 
-    static void prompt() {
+    private static void prompt() {
         System.out.println("Enter option to send to server (1-7)");
         System.out.println("1. Data and Time");
         System.out.println("2. Uptime");
@@ -48,6 +48,15 @@ public class Client {
         System.out.println("6. Running Processes");
         System.out.println("7. Quit");
     }
+
+    //TODO: Fix parameter order
+//    private static void writeToFile(String fileName, Long timestamp,  Pair<String, Long> result, String message, int numThreads, double averageTime) throws IOException {
+//        try (BufferedWriter out = new BufferedWriter(new FileWriter(fileName))) {
+//            //Timestamp, MessageID, OutputMessage, Runtime, numThreads, averageTime
+//            String line = timestamp + "," + message + "," + result.first + "," + result.second + "," + numThreads + "," + averageTime + "\n";
+//            out.write(line);
+//        }
+//    }
 
     public static void main(String[] args) {
         if (args.length != 2) {
@@ -76,15 +85,28 @@ public class Client {
 
         prompt();
         String msg = scanner.nextLine();
+        int command = Integer.parseInt(msg);
 
-        while (!msg.equals("quit")) {
-            long batchStart = System.nanoTime();
+        while (true) {
+            if (command < 1 || command > 7) {
+
+                System.err.println("Invalid command. Please try again.");
+                msg = scanner.nextLine();
+                command = Integer.parseInt(msg);
+                continue;
+            }
+
+            if (command == 7) {
+                System.out.println("Closing server and client");
+                threadPool.submit(new Task(ip, port, msg));
+                break;
+            }
+
             for (int i = 0; i < numThreads; ++i) {
                 Task task = new Task(ip, port, msg);
                 Future<Pair<String, Long>> output = threadPool.submit(task);
                 results.add(output);
             }
-            long batchDur = System.nanoTime() - batchStart;
 
             for (Future<Pair<String, Long>> result : results) {
                 try {
@@ -99,6 +121,7 @@ public class Client {
             results.clear();
             prompt();
             msg = scanner.nextLine();
+            command = Integer.parseInt(msg);
         }
 
         threadPool.shutdown();
