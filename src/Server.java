@@ -58,7 +58,8 @@ public class Server {
 //                    }
 
                     out.println(reply);
-                    if (command == 7) System.exit(0);
+                    //TODO Uncomment when done testing
+//                    if (command == 7) System.exit(0);
 
                 } catch (IOException e) {
                     System.err.println("Client error: " + e.getMessage());

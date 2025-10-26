@@ -50,15 +50,16 @@ public class Client {
     }
 
     //TODO: Fix parameter order
-//    private static void writeToFile(String fileName, Long timestamp,  Pair<String, Long> result, String message, int numThreads, double averageTime) throws IOException {
-//        try (BufferedWriter out = new BufferedWriter(new FileWriter(fileName))) {
-//            //Timestamp, MessageID, OutputMessage, Runtime, numThreads, averageTime
-//            String line = timestamp + "," + message + "," + result.first + "," + result.second + "," + numThreads + "," + averageTime + "\n";
-//            out.write(line);
-//        }
-//    }
 
-    public static void main(String[] args) {
+
+    private static void writeToFile(String fileName, Long timestamp, int messageId, int numThreads, double averageTime) throws IOException {
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(fileName, true))) {
+            //timestamp, command, numThreads, averageTime
+            out.write(timestamp + "," + messageId + "," + numThreads + "," + averageTime + "\n");
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
         if (args.length != 2) {
             System.out.println("Usage: java Client <IP> <port>");
             System.exit(1);
@@ -102,21 +103,30 @@ public class Client {
                 break;
             }
 
+            Instant time = Instant.now();
+
             for (int i = 0; i < numThreads; ++i) {
                 Task task = new Task(ip, port, msg);
                 Future<Pair<String, Long>> output = threadPool.submit(task);
                 results.add(output);
             }
 
+            double totalTime = 0.0;
+
             for (Future<Pair<String, Long>> result : results) {
                 try {
                     Pair<String, Long> res = result.get();
                     //TODO: Write to CSV file for graphing.
+//                    writeToFile("data/res.csv", time.toEpochMilli(), command, res);
+                    totalTime += res.second();
                     System.out.println(res.first + " " + res.second / 1e9);
                 } catch (Exception e) {
                     System.err.println("Error getting result: " + e);
                 }
             }
+
+            //timestamp, command, numThreads, averageTime
+            writeToFile("data/res.csv", time.toEpochMilli(), command, numThreads, (totalTime / numThreads) / 1e9);
 
             results.clear();
             prompt();
@@ -126,5 +136,6 @@ public class Client {
 
         threadPool.shutdown();
         scanner.close();
+        System.exit(0);
     }
 }

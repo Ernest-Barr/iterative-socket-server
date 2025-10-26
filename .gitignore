@@ -5,6 +5,8 @@ out/
 .kotlin
 .idea/
 *.class
+data/
+*.csv
 
 ### Eclipse ###
 .apt_generated
