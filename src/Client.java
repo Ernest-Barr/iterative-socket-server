@@ -1,39 +1,35 @@
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.time.Instant;
-
 
 public class Client {
+
     private record Pair<T, T1>(T first, T1 second) {
     }
 
     // https://www.geeksforgeeks.org/java/callable-future-java/
-    private static class Task implements Callable<Pair<String, Long>> {
-        private final String IP;
-        private final int PORT;
-        private final String message;
-
-        Task(String IP, int PORT, String message) {
-            this.PORT = PORT;
-            this.IP = IP;
-            this.message = message;
-        }
-
+    private record Task(String IP, int PORT, String message) implements Callable<Pair<String, Long>> {
         @Override
         public Pair<String, Long> call() throws IOException {
-            try (Socket socket = new Socket(this.IP, this.PORT); BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)); PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)) {
-                long start = System.nanoTime();
+            try (final Socket socket = new Socket(this.IP, this.PORT); final BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)); final PrintWriter output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)) {
+                final long start = System.nanoTime();
                 output.println(this.message);
-                String outputMessage = input.readLine();
-                long time = System.nanoTime() - start;
-                return new Pair<>(outputMessage, time);
+
+                StringBuilder outputMessage = new StringBuilder();
+
+                String line;
+
+                while ((line = input.readLine()) != null) outputMessage.append(line).append("\n");
+
+                final long time = System.nanoTime() - start;
+                return new Pair<>(outputMessage.toString(), time);
             }
         }
     }
@@ -49,10 +45,7 @@ public class Client {
         System.out.println("7. Quit");
     }
 
-    //TODO: Fix parameter order
-
-
-    private static void writeToFile(String fileName, Long timestamp, int messageId, int numThreads, double averageTime) throws IOException {
+    private static void writeToFile(final String fileName, final Long timestamp, final int messageId, final int numThreads, final double averageTime) throws IOException {
         try (BufferedWriter out = new BufferedWriter(new FileWriter(fileName, true))) {
             //timestamp, command, numThreads, averageTime
             out.write(timestamp + "," + messageId + "," + numThreads + "," + averageTime + "\n");
@@ -70,17 +63,17 @@ public class Client {
         final int port = Integer.parseInt(args[1]);
 
         Scanner scanner = new Scanner(System.in);
-        System.out.println("How many clients do you want to generate? (1-25)");
+        System.out.println("How many clients do you want to generate? (1-100)");
         int numThreads = scanner.nextInt();
         scanner.nextLine(); // Consume newline
 
-        if (numThreads < 1 || numThreads > 25) {
+        if (numThreads < 1 || numThreads > 100) {
             System.err.println("Invalid number of clients. Please try again.");
             System.exit(1);
         }
 
-//            https://www.geeksforgeeks.org/java/thread-pools-java/
-//            https://www.baeldung.com/thread-pool-java-and-guava
+        //            https://www.geeksforgeeks.org/java/thread-pools-java/
+        //            https://www.baeldung.com/thread-pool-java-and-guava
         ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
         ArrayList<Future<Pair<String, Long>>> results = new ArrayList<>();
 
@@ -90,7 +83,6 @@ public class Client {
 
         while (true) {
             if (command < 1 || command > 7) {
-
                 System.err.println("Invalid command. Please try again.");
                 msg = scanner.nextLine();
                 command = Integer.parseInt(msg);
@@ -103,7 +95,7 @@ public class Client {
                 break;
             }
 
-            Instant time = Instant.now();
+            final Instant time = Instant.now();
 
             for (int i = 0; i < numThreads; ++i) {
                 Task task = new Task(ip, port, msg);
@@ -116,10 +108,8 @@ public class Client {
             for (Future<Pair<String, Long>> result : results) {
                 try {
                     Pair<String, Long> res = result.get();
-                    //TODO: Write to CSV file for graphing.
-//                    writeToFile("data/res.csv", time.toEpochMilli(), command, res);
                     totalTime += res.second();
-                    System.out.println(res.first + " " + res.second / 1e9);
+                    System.out.println(res.first + " Runtime: " + res.second / 1e9);
                 } catch (Exception e) {
                     System.err.println("Error getting result: " + e);
                 }
