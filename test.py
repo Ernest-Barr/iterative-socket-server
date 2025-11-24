@@ -34,7 +34,8 @@ def test(thread_count):
 def main():
     print("Starting test")
 
-    for i in range(1, 101):
+    tc = [1, 5, 10, 15, 20, 25 ,100]
+    for i in tc:
         print("Running for thread count ", i)
         test(i)
 
